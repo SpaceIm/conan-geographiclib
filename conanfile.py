@@ -125,12 +125,12 @@ class GeographiclibConan(ConanFile):
         tools.remove_files_by_mask(os.path.join(self.package_folder, "bin"), "*.pdb")
         self._create_cmake_module_targets(
             os.path.join(self.package_folder, self._module_subfolder, self._module_file),
-            libs={"GeographicLib": "GeographicLib::GeographicLib"},
+            libs={"GeographicLib": "GeographicLib::GeographicLib"}, # "GeographicLib and GeographicLib::GeographicLib are both official targets
             executables=self._executables
         )
 
     @staticmethod
-    def _create_cmake_module_targets(module_file, libs={}, executables=[]):
+    def _create_cmake_module_targets(module_file, libs={}, executables={}):
         content = ""
         for alias, aliased in libs.items():
             content += (
@@ -139,12 +139,13 @@ class GeographiclibConan(ConanFile):
                 "    target_link_libraries({alias} INTERFACE {aliased})\n"
                 "endif()\n"
             ).format(alias=alias, aliased=aliased)
-        for executable in executables:
+        for target, executable in executables.items():
             content += (
-                "if(NOT TARGET {exec})\n"
-                "    add_executable({exec} IMPORTED)\n"
+                "if(NOT TARGET {target})\n"
+                "    add_executable({target} IMPORTED)\n"
+                "    set_property(TARGET {target} PROPERTY IMPORTED_LOCATION \"${{CMAKE_CURRENT_LIST_DIR}}/../../bin/{exec}\")\n"
                 "endif()\n"
-            ).format(exec=executable)
+            ).format(target=target, exec=executable)
         tools.save(module_file, content)
 
     @property
@@ -157,13 +158,25 @@ class GeographiclibConan(ConanFile):
 
     @property
     def _executables(self):
-        executables = []
+        executables = {}
+        suffix = ".exe" if self.settings.os == "Windows" else ""
         if self.options.tools:
-            executables.extend([
-                "CartConvert", "ConicProj", "GeodesicProj", "GeoConvert",
-                "GeodSolve", "GeoidEval", "Gravity", "MagneticField",
-                "Planimeter", "RhumbSolve", "TransverseMercatorProj"
-            ])
+            # Non namespaced imported targets
+            executables.update({
+                "CartConvert": "CartConvert" + suffix,
+                "ConicProj": "ConicProj" + suffix,
+                "GeodesicProj": "GeodesicProj" + suffix,
+                "GeoConvert": "GeoConvert" + suffix,
+                "GeodSolve": "GeodSolve" + suffix,
+                "GeoidEval": "GeoidEval" + suffix,
+                "Gravity": "Gravity" + suffix,
+                "MagneticField": "MagneticField" + suffix,
+                "Planimeter": "Planimeter" + suffix,
+                "RhumbSolve": "RhumbSolve" + suffix,
+                "TransverseMercatorProj": "TransverseMercatorProj" + suffix,
+            })
+            # Namespaced imported targets
+            executables.update({"GeographicLib::{}".format(target): executable for target, executable in executables.items()})
         return executables
 
     def package_info(self):
