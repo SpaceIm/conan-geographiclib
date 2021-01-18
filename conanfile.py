@@ -43,9 +43,25 @@ class GeographiclibConan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
+    @property
+    def _minimum_compilers_version(self):
+        return {
+            "Visual Studio": "14",
+            "gcc": "4.9",
+            "clang": "6",
+        }
+
     def configure(self):
         if self.options.shared:
             del self.options.fPIC
+        if tools.Version(self.version) >= "1.51":
+            if self.settings.compiler.get_safe("cppstd"):
+                tools.min_cppstd(self, 11)
+            minimum_version = self._minimum_compilers_version.get(str(self.settings.compiler), False)
+            if not minimum_version:
+                self.output.warn("geographiclib {} requires C++11 math functions. Your compiler is unknown. Assuming it supports this feature.".format(self.version))
+            elif tools.Version(self.settings.compiler.version) < minimum_version:
+                raise ConanInvalidConfiguration("geographiclib {} requires C++11 math functions, which your compiler does not support.".format(self.version))
         if self.options.precision not in ["float", "double"]:
             # FIXME: add support for extended, quadruple and variable precisions
             # (may require external libs: boost multiprecision for quadruple, mpfr for variable)
