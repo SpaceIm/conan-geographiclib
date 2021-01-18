@@ -1,5 +1,6 @@
 from conans import ConanFile, CMake, tools
 from conans.errors import ConanInvalidConfiguration
+import glob
 import os
 
 required_conan_version = ">=1.29.1"
@@ -168,21 +169,23 @@ class GeographiclibConan(ConanFile):
 
     @property
     def _executables(self):
+        def exec_name(name):
+            return os.path.basename(glob.glob(os.path.join(self.package_folder, "bin", name + "*"))[0])
+
         executables = {}
-        suffix = ".exe" if self.settings.os == "Windows" else ""
         if self.options.tools:
             executables.update({
-                "CartConvert": "CartConvert" + suffix,
-                "ConicProj": "ConicProj" + suffix,
-                "GeodesicProj": "GeodesicProj" + suffix,
-                "GeoConvert": "GeoConvert" + suffix,
-                "GeodSolve": "GeodSolve" + suffix,
-                "GeoidEval": "GeoidEval" + suffix,
-                "Gravity": "Gravity" + suffix,
-                "MagneticField": "MagneticField" + suffix,
-                "Planimeter": "Planimeter" + suffix,
-                "RhumbSolve": "RhumbSolve" + suffix,
-                "TransverseMercatorProj": "TransverseMercatorProj" + suffix,
+                "CartConvert": exec_name("CartConvert"),
+                "ConicProj": exec_name("ConicProj"),
+                "GeodesicProj": exec_name("GeodesicProj"),
+                "GeoConvert": exec_name("GeoConvert"),
+                "GeodSolve": exec_name("GeodSolve"),
+                "GeoidEval": exec_name("GeoidEval"),
+                "Gravity": exec_name("Gravity"),
+                "MagneticField": exec_name("MagneticField"),
+                "Planimeter": exec_name("Planimeter"),
+                "RhumbSolve": exec_name("RhumbSolve"),
+                "TransverseMercatorProj": exec_name("TransverseMercatorProj"),
             })
         return executables
 
