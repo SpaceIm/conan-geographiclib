@@ -99,6 +99,48 @@ class GeographiclibConan(ConanFile):
                        os.path.join("lib", "cmake"), "sbin", "python", "matlab", "doc", "cmake"]:
             tools.rmdir(os.path.join(os.path.join(self.package_folder, folder)))
         tools.remove_files_by_mask(os.path.join(self.package_folder, "bin"), "*.pdb")
+        self._create_cmake_module_targets(
+            os.path.join(self.package_folder, self._module_subfolder, self._module_file),
+            libs={"GeographicLib": "GeographicLib::GeographicLib"},
+            executables=self._executables
+        )
+
+    @staticmethod
+    def _create_cmake_module_targets(module_file, libs={}, executables=[]):
+        content = ""
+        for alias, aliased in libs.items():
+            content += (
+                "if(TARGET {aliased} AND NOT TARGET {alias})\n"
+                "    add_library({alias} INTERFACE IMPORTED)\n"
+                "    target_link_libraries({alias} INTERFACE {aliased})\n"
+                "endif()\n"
+            ).format(alias=alias, aliased=aliased)
+        for executable in executables:
+            content += (
+                "if(NOT TARGET {exec})\n"
+                "    add_executable({exec} IMPORTED)\n"
+                "endif()\n"
+            ).format(exec=executable)
+        tools.save(module_file, content)
+
+    @property
+    def _module_subfolder(self):
+        return os.path.join("lib", "cmake")
+
+    @property
+    def _module_file(self):
+        return "conan-official-{}-targets.cmake".format(self.name)
+
+    @property
+    def _executables(self):
+        executables = []
+        if self.options.tools:
+            executables.extend([
+                "CartConvert", "ConicProj", "GeodesicProj", "GeoConvert",
+                "GeodSolve", "GeoidEval", "Gravity", "MagneticField",
+                "Planimeter", "RhumbSolve", "TransverseMercatorProj"
+            ])
+        return executables
 
     def package_info(self):
         self.cpp_info.filenames["cmake_find_package"] = "geographiclib"
@@ -107,6 +149,8 @@ class GeographiclibConan(ConanFile):
         self.cpp_info.names["cmake_find_package_multi"] = "GeographicLib"
         self.cpp_info.libs = tools.collect_libs(self)
         self.cpp_info.defines.append("GEOGRAPHICLIB_SHARED_LIB={}".format("1" if self.options.shared else "0"))
+        self.cpp_info.builddirs = [self._module_subfolder]
+        self.cpp_info.build_modules = [os.path.join(self._module_subfolder, self._module_file)]
 
         if self.options.tools:
             bin_path = os.path.join(self.package_folder, "bin")
