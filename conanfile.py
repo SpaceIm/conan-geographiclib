@@ -149,11 +149,11 @@ class GeographiclibConan(ConanFile):
                 "    if(NOT TARGET {target})\n"
                 "        add_executable({target} IMPORTED)\n"
                 "        set_property(TARGET {target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
-                "    endif())\n"
+                "    endif()\n"
                 "    if(NOT TARGET GeographicLib::{target})\n"
                 "        add_executable(GeographicLib::{target} IMPORTED)\n"
                 "        set_property(TARGET GeographicLib::{target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
-                "    endif())\n"
+                "    endif()\n"
                 "endif()\n"
             ).format(target=target, exec=executable)
         tools.save(module_file, content)
