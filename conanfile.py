@@ -57,11 +57,19 @@ class GeographiclibConan(ConanFile):
         if tools.Version(self.version) >= "1.51":
             if self.settings.compiler.get_safe("cppstd"):
                 tools.min_cppstd(self, 11)
+
+            def lazy_lt_semver(v1, v2):
+                lv1 = [int(v) for v in v1.split(".")]
+                lv2 = [int(v) for v in v2.split(".")]
+                min_length = min(len(lv1), len(lv2))
+                return lv1[:min_length] < lv2[:min_length]
+
             minimum_version = self._minimum_compilers_version.get(str(self.settings.compiler), False)
             if not minimum_version:
                 self.output.warn("geographiclib {} requires C++11 math functions. Your compiler is unknown. Assuming it supports this feature.".format(self.version))
-            elif tools.Version(self.settings.compiler.version) < minimum_version:
+            elif lazy_lt_semver(str(self.settings.compiler.version), minimum_version):
                 raise ConanInvalidConfiguration("geographiclib {} requires C++11 math functions, which your compiler does not support.".format(self.version))
+
         if self.options.precision not in ["float", "double"]:
             # FIXME: add support for extended, quadruple and variable precisions
             # (may require external libs: boost multiprecision for quadruple, mpfr for variable)
