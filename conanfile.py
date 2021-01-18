@@ -11,14 +11,30 @@ class GeographiclibConan(ConanFile):
     url = "https://github.com/conan-io/conan-center-index"
     homepage = "https://geographiclib.sourceforge.io"
     license = "MIT"
-    generators = "cmake"
+
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+        "tools": [True, False]
+    }
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+        "tools": True
+    }
+
     exports_sources = ["CMakeLists.txt"]
-    _source_subfolder = "source_subfolder"
-    _build_subfolder = "build_subfolder"
+    generators = "cmake"
     _cmake = None
+
+    @property
+    def _source_subfolder(self):
+        return "source_subfolder"
+
+    @property
+    def _build_subfolder(self):
+        return "build_subfolder"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -39,6 +55,11 @@ class GeographiclibConan(ConanFile):
         tools.replace_in_file(cmakelists, "add_subdirectory (js)", "")
         # Don't install system libs
         tools.replace_in_file(cmakelists, "include (InstallRequiredSystemLibraries)", "")
+        # Don't build tools if asked
+        if not self.options.tools:
+            tools.replace_in_file(cmakelists, "add_subdirectory (tools)", "")
+            tools.replace_in_file(os.path.join(self._source_subfolder, "cmake", "CMakeLists.txt"),
+                                  "${TOOLS}", "")
 
     def _configure_cmake(self):
         if not self._cmake:
@@ -69,6 +90,7 @@ class GeographiclibConan(ConanFile):
         self.cpp_info.libs = tools.collect_libs(self)
         self.cpp_info.defines.append("GEOGRAPHICLIB_SHARED_LIB={}".format("1" if self.options.shared else "0"))
 
-        bin_path = os.path.join(self.package_folder, "bin")
-        self.output.info("Appending PATH environment variable: {}".format(bin_path))
-        self.env_info.PATH.append(bin_path)
+        if self.options.tools:
+            bin_path = os.path.join(self.package_folder, "bin")
+            self.output.info("Appending PATH environment variable: {}".format(bin_path))
+            self.env_info.PATH.append(bin_path)
