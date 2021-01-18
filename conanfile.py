@@ -1,7 +1,8 @@
 from conans import ConanFile, CMake, tools
 import os
 
-required_conan_version = ">=1.28.0"
+required_conan_version = ">=1.29.1"
+
 
 class GeographiclibConan(ConanFile):
     name = "geographiclib"
@@ -32,6 +33,13 @@ class GeographiclibConan(ConanFile):
         extracted_dir = "GeographicLib-" + self.version
         os.rename(extracted_dir, self._source_subfolder)
 
+    def _patch_sources(self):
+        cmakelists = os.path.join(self._source_subfolder, "CMakeLists.txt")
+        # it does not work on Windows but is not needed
+        tools.replace_in_file(cmakelists, "add_subdirectory (js)", "")
+        # Don't install system libs
+        tools.replace_in_file(cmakelists, "include (InstallRequiredSystemLibraries)", "")
+
     def _configure_cmake(self):
         if not self._cmake:
             self._cmake = CMake(self)
@@ -40,9 +48,7 @@ class GeographiclibConan(ConanFile):
         return self._cmake
 
     def build(self):
-        # it does not work on Windows but is not needed
-        tools.replace_in_file(os.path.join(self._source_subfolder, "CMakeLists.txt"),
-                              "add_subdirectory (js)", "")
+        self._patch_sources()
         cmake = self._configure_cmake()
         cmake.build()
 
@@ -53,12 +59,7 @@ class GeographiclibConan(ConanFile):
         for folder in ["share", os.path.join("lib", "python"), os.path.join("lib", "pkgconfig"),
                        os.path.join("lib", "cmake"), "sbin", "python", "matlab", "doc", "cmake"]:
             tools.rmdir(os.path.join(os.path.join(self.package_folder, folder)))
-        if self.settings.os == "Linux" or self.settings.os == "Macos":
-            tools.rmdir(os.path.join(os.path.join(self.package_folder, "bin")))
-        elif self.settings.os == "Windows":
-            for item in os.listdir(os.path.join(os.path.join(self.package_folder, "bin"))):
-                if not item.startswith("Geographic") or item.endswith(".pdb"):
-                    os.remove(os.path.join(self.package_folder, "bin", item))
+        tools.remove_files_by_mask(os.path.join(self.package_folder, "bin"), "*.pdb")
 
     def package_info(self):
         self.cpp_info.filenames["cmake_find_package"] = "geographiclib"
@@ -67,3 +68,7 @@ class GeographiclibConan(ConanFile):
         self.cpp_info.names["cmake_find_package_multi"] = "GeographicLib"
         self.cpp_info.libs = tools.collect_libs(self)
         self.cpp_info.defines.append("GEOGRAPHICLIB_SHARED_LIB={}".format("1" if self.options.shared else "0"))
+
+        bin_path = os.path.join(self.package_folder, "bin")
+        self.output.info("Appending PATH environment variable: {}".format(bin_path))
+        self.env_info.PATH.append(bin_path)
