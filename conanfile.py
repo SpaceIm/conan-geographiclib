@@ -142,14 +142,18 @@ class GeographiclibConan(ConanFile):
         for target, executable in executables.items():
             # Geographic lib provides both namespaced and non-namespaced imported targets
             content += (
-                "if(NOT TARGET {target})\n"
-                "    add_executable({target} IMPORTED)\n"
-                "    add_executable(GeographicLib::{target} IMPORTED)\n"
+                "if(NOT TARGET {target} OR NOT TARGET GeographicLib::{target})\n"
                 "    get_filename_component(GeographicLib_{target}_IMPORTED_LOCATION \"${{CMAKE_CURRENT_LIST_DIR}}/../../bin/{exec}\" ABSOLUTE)\n"
-                "    set_property(TARGET {target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
-                "    set_property(TARGET GeographicLib::{target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
                 "    message(STATUS \"GeographicLib component {target} found: ${{GeographicLib_{target}_IMPORTED_LOCATION}}\")\n"
                 "    set(GeographicLib_{target}_FOUND ON)\n"
+                "    if(NOT TARGET {target})\n"
+                "        add_executable({target} IMPORTED)\n"
+                "        set_property(TARGET {target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
+                "    endif())\n"
+                "    if(NOT TARGET GeographicLib::{target})\n"
+                "        add_executable(GeographicLib::{target} IMPORTED)\n"
+                "        set_property(TARGET GeographicLib::{target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
+                "    endif())\n"
                 "endif()\n"
             ).format(target=target, exec=executable)
         tools.save(module_file, content)
