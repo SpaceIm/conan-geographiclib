@@ -140,10 +140,16 @@ class GeographiclibConan(ConanFile):
                 "endif()\n"
             ).format(alias=alias, aliased=aliased)
         for target, executable in executables.items():
+            # Geographic lib provides both namespaced and non-namespaced imported targets
             content += (
                 "if(NOT TARGET {target})\n"
                 "    add_executable({target} IMPORTED)\n"
-                "    set_property(TARGET {target} PROPERTY IMPORTED_LOCATION \"${{CMAKE_CURRENT_LIST_DIR}}/../../bin/{exec}\")\n"
+                "    add_executable(GeographicLib::{target} IMPORTED)\n"
+                "    get_filename_component(GeographicLib_{target}_IMPORTED_LOCATION \"${{CMAKE_CURRENT_LIST_DIR}}/../../bin/{exec}\" ABSOLUTE)\n"
+                "    set_property(TARGET {target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
+                "    set_property(TARGET GeographicLib::{target} PROPERTY IMPORTED_LOCATION ${{GeographicLib_{target}_IMPORTED_LOCATION}})\n"
+                "    message(STATUS \"GeographicLib component {target} found: ${{GeographicLib_{target}_IMPORTED_LOCATION}}\")\n"
+                "    set(GeographicLib_{target}_FOUND ON)\n"
                 "endif()\n"
             ).format(target=target, exec=executable)
         tools.save(module_file, content)
@@ -161,7 +167,6 @@ class GeographiclibConan(ConanFile):
         executables = {}
         suffix = ".exe" if self.settings.os == "Windows" else ""
         if self.options.tools:
-            # Non namespaced imported targets
             executables.update({
                 "CartConvert": "CartConvert" + suffix,
                 "ConicProj": "ConicProj" + suffix,
@@ -175,8 +180,6 @@ class GeographiclibConan(ConanFile):
                 "RhumbSolve": "RhumbSolve" + suffix,
                 "TransverseMercatorProj": "TransverseMercatorProj" + suffix,
             })
-            # Namespaced imported targets
-            executables.update({"GeographicLib::{}".format(target): executable for target, executable in executables.items()})
         return executables
 
     def package_info(self):
