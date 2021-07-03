@@ -43,6 +43,10 @@ class GeographiclibConan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
+    def configure(self):
+        if self.options.shared:
+            del self.options.fPIC
+
     @property
     def _min_compiler_version_default_cxx11(self):
         # Minimum compiler version having C++11 math functions
@@ -53,10 +57,7 @@ class GeographiclibConan(ConanFile):
             "Visual Studio": "14",  # guess
         }.get(str(self.settings.compiler), False)
 
-    def configure(self):
-        if self.options.shared:
-            del self.options.fPIC
-
+    def validate(self):
         if tools.Version(self.version) >= "1.51":
             if self.settings.compiler.get_safe("cppstd"):
                 tools.check_min_cppstd(self, 11)
